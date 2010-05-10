@@ -434,7 +434,7 @@ public class InnoDB implements Library {
          */
         public static final int IB_LOCK_NONE = 5;
         // / < number of lock modes
-        public static final int IB_LOCK_NUM = com.g414.inno.jna.impl.InnoDB.ib_lck_mode_t.IB_LOCK_NONE;
+        public static final int IB_LOCK_NUM = InnoDB.ib_lck_mode_t.IB_LOCK_NONE;
     }
 
     public static interface ib_srch_mode_t {
