@@ -39,7 +39,6 @@ public class Cursor {
         for (int i = 0; i < tuple.getSize(); i++) {
             Object value = values.get(i);
             ColumnDef colDef = table.getColDefs().get(i);
-            // System.out.println(colDef.getName() + " " + value);
             setValue(searchTuple, colDef, i, value);
         }
 
@@ -66,11 +65,13 @@ public class Cursor {
     }
 
     public void first() {
-        Util.assertSuccess(InnoDB.ib_cursor_first(crsr.getValue()));
+        err = InnoDB.ib_cursor_first(crsr.getValue());
+        assertCursorState(err);
     }
 
     public void last() {
-        Util.assertSuccess(InnoDB.ib_cursor_last(crsr.getValue()));
+        err = InnoDB.ib_cursor_last(crsr.getValue());
+        assertCursorState(err);
     }
 
     public boolean hasNext() {
@@ -124,6 +125,7 @@ public class Cursor {
         List<ColumnDef> colDefs = def.getColDefs();
 
         int len = values.size();
+        InnoDB.ib_tuple_clear(tupl.tupl);
 
         for (int i = 0; i < len; i++) {
             Object val = values.get(i);
@@ -152,9 +154,7 @@ public class Cursor {
             case BINARY:
             case VARBINARY:
             case BLOB:
-                byte[] byteVal = (byte[]) val;
-                Util.assertSuccess(InnoDB.ib_col_set_value(tupl.tupl, i, Types
-                        .getBytes(byteVal), byteVal.length));
+                storeBytes(tupl, colDef, i, (byte[]) val);
                 break;
             case CHAR:
             case CHAR_ANYCHARSET:
@@ -204,6 +204,11 @@ public class Cursor {
                         + colDef.getType());
             }
         }
+    }
+
+    private void storeBytes(Tuple tupl, ColumnDef colDef, int i, byte[] val) {
+        Util.assertSuccess(InnoDB.ib_col_set_value(tupl.tupl, i, Types
+                .getBytes(val), val.length));
     }
 
     public void close() {

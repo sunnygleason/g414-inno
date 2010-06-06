@@ -95,12 +95,16 @@ public class Tuple {
             return null;
         }
 
+        if (len == 0) {
+            return new byte[0];
+        }
+
         return InnoDB.ib_col_get_value(tupl, index).getByteArray(0, len);
     }
 
     public String getString(int index) {
-        int len = InnoDB.ib_col_get_len(tupl, index);
-        if (len == InnoDB.IB_SQL_NULL) {
+        InnoDB.ib_col_meta_t meta = new InnoDB.ib_col_meta_t();
+        if (InnoDB.ib_col_get_meta(tupl, index, meta) == InnoDB.IB_SQL_NULL) {
             return null;
         }
 
