@@ -11,7 +11,7 @@ public enum ColumnAttribute {
     }
 
     public int getCode() {
-        return code > 0 ? 1 << code : code;
+        return code > 0 ? 1 << (code - 1) : code;
     }
 
     public ColumnAttribute fromCode(int code) {

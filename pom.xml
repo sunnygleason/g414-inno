@@ -7,7 +7,7 @@
   <version>0.1.0</version>
 
   <dependencies>
-     <dependency>
+    <dependency>
       <groupId>net.java.dev.jna</groupId>
       <artifactId>jna</artifactId>
       <version>3.2.2</version>
@@ -17,6 +17,12 @@
       <artifactId>testng</artifactId>
       <version>5.11</version>
       <classifier>jdk15</classifier>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>commons-codec</groupId>
+      <artifactId>commons-codec</artifactId>
+      <version>1.4</version>
       <scope>test</scope>
     </dependency>
   </dependencies>

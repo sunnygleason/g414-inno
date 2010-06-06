@@ -1,22 +1,36 @@
 package com.g414.inno.db;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class TupleBuilder {
-    public List<ColumnValue> values;
+    private final TableDef def;
+    private final List<Object> values;
+    private final AtomicInteger size = new AtomicInteger(0);
 
-    public TupleBuilder() {
-        this.values = new ArrayList<ColumnValue>();
+    public TupleBuilder(TableDef def) {
+        this.def = def;
+        this.values = new ArrayList<Object>(def.getColumnDefs().size());
     }
 
-    public TupleBuilder addValue(Integer colIndex, Object value, Integer length) {
-        this.values.add(new ColumnValue(colIndex, value, length));
+    public TupleBuilder addValue(Object value) {
+        values.add(value);
+        size.getAndIncrement();
 
         return this;
     }
 
-    public List<ColumnValue> getValues() {
-        return values;
+    public List<Object> getValues() {
+        return Collections.unmodifiableList(values);
+    }
+
+    public int getSize() {
+        return size.get();
+    }
+
+    public TableDef getDef() {
+        return def;
     }
 }

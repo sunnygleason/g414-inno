@@ -4,28 +4,26 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
+
 
 public class TableBuilder {
     private final String name;
-    private final List<ColumnDef> columns;
+    private final Map<String, ColumnDef> columns;
     private final Map<String, List<IndexPart>> indexes;
+    private volatile AtomicInteger index = new AtomicInteger();
 
     public TableBuilder(String name) {
         this.name = name;
-        this.columns = new ArrayList<ColumnDef>();
+        this.columns = new LinkedHashMap<String, ColumnDef>();
         this.indexes = new LinkedHashMap<String, List<IndexPart>>();
     }
 
-    public String getName() {
-        return name;
-    }
-
-    public List<ColumnDef> getColumns() {
-        return columns;
-    }
-
-    public TableBuilder addColumn(ColumnDef def) {
-        this.columns.add(def);
+    public TableBuilder addColumn(String name, ColumnType type, int length,
+            ColumnAttribute... attrs) {
+        ColumnDef def = new ColumnDef(index.getAndIncrement(), name, type,
+                length, attrs);
+        this.columns.put(def.getName(), def);
 
         return this;
     }
@@ -41,8 +39,28 @@ public class TableBuilder {
         return this;
     }
 
-    public Map<String, List<IndexPart>> getIndexes() {
-        return indexes;
+    public TableDef build() {
+        Map<String, IndexDef> defs = createIndexDefMap();
+
+        return new TableDef(name, columns, defs);
+    }
+
+    private Map<String, IndexDef> createIndexDefMap() {
+        Map<String, IndexDef> defs = new LinkedHashMap<String, IndexDef>();
+        for (Map.Entry<String, List<IndexPart>> entry : indexes.entrySet()) {
+            boolean clustered = false;
+            boolean unique = false;
+            for (IndexPart part : entry.getValue()) {
+                clustered |= part.isClustered();
+                unique |= part.isUnique();
+            }
+            IndexDef idx = new IndexDef(entry.getKey(), entry.getValue(),
+                    clustered, unique);
+
+            defs.put(entry.getKey(), idx);
+        }
+
+        return defs;
     }
 
     public static class IndexPart {

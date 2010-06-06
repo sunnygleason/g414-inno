@@ -8,7 +8,7 @@ import com.sun.jna.Pointer;
 import com.sun.jna.ptr.PointerByReference;
 
 @Test
-public class JNA_InnoDB_Read_Test {
+public class JNAInnoDBReadTest {
     private static final String TABLE_NAME = "foo/bar";
 
     public void testInno() {

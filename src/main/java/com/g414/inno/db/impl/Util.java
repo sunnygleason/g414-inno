@@ -1,5 +1,6 @@
-package com.g414.inno.db;
+package com.g414.inno.db.impl;
 
+import com.g414.inno.db.InnoException;
 import com.g414.inno.jna.impl.InnoDB;
 
 public class Util {

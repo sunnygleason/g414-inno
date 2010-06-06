@@ -12,7 +12,7 @@ import com.sun.jna.Pointer;
 import com.sun.jna.ptr.PointerByReference;
 
 @Test
-public class JNA_InnoDB_Write_Test {
+public class JNAInnoDBWriteTest {
     private static final String DB_NAME = "foo";
     private static final String TABLE_NAME = "foo/bar";
 
