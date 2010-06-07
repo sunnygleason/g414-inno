@@ -15,8 +15,8 @@ import com.g414.inno.jna.impl.InnoDB;
 import com.sun.jna.Pointer;
 
 public class Tuple {
-    protected final Pointer tupl;
     protected final TableDef table;
+    protected Pointer tupl;
 
     public Tuple(Pointer tupl, TableDef table) {
         this.tupl = tupl;
@@ -153,7 +153,7 @@ public class Tuple {
     }
 
     public void clear() {
-        InnoDB.ib_tuple_clear(tupl);
+        tupl = InnoDB.ib_tuple_clear(tupl);
     }
 
     public void delete() {

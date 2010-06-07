@@ -12,6 +12,8 @@ public class Types {
     public static Pointer getBytes(byte[] value) {
         if (value == null) {
             return Memory.NULL;
+        } else if (value.length == 0) {
+            return new Memory(4);
         }
 
         Memory m = new Memory(value.length);
