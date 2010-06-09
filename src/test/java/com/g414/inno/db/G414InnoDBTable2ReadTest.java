@@ -17,6 +17,8 @@ public class G414InnoDBTable2ReadTest {
     private void readRows(Database d) {
         Transaction t = d.beginTransaction(Level.REPEATABLE_READ);
         Cursor c = t.openTable(G414InnoDBTableDefs.TABLE_2);
+        c.lock(Lock.INTENTION_EXCLUSIVE);
+
         c.first();
 
         Tuple tupl = c.createReadTuple();
@@ -25,8 +27,13 @@ public class G414InnoDBTable2ReadTest {
         System.out.println(new Date() + " read...");
 
         while (c.hasNext()) {
-            if (i % 10000 == 0) {
+            if (i % 1000 == 0) {
                 c.readRow(tupl);
+                System.out.println(tupl.values());
+                for (Object val : tupl.values()) {
+                    System.out.println(new String((byte[]) val));
+                }
+
                 System.out.println(tupl.valueMap());
                 System.out.println(new Date() + " read " + i);
             }
@@ -48,10 +55,12 @@ public class G414InnoDBTable2ReadTest {
                 System.out.println(new Date() + " reread " + i);
             }
 
-            tupl.clear();
             c.next();
+            tupl.clear();
             i += 1;
         }
+
+        tupl.delete();
 
         System.out.println(new Date() + " read " + i);
         System.out.println(new Date() + " done.");

@@ -14,12 +14,9 @@ public class G414InnoDBCreateDropDBTest {
 
         d.createDatabase(DATABASE_NAME);
 
-        Schema s = d.createSchema(SCHEMA_NAME, TableType.COMPRESSED, 0);
-
         TableBuilder b = new TableBuilder("whoa");
         b.addColumn("c1", ColumnType.INT, 4);
-        d.createTable(s, b.build());
-        s.close();
+        d.createTable(b.build());
 
         Thread.sleep(10000);
         d.dropDatabase(DATABASE_NAME + "/");

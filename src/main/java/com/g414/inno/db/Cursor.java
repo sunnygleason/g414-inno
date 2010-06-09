@@ -4,7 +4,6 @@ import java.nio.ByteBuffer;
 import java.nio.IntBuffer;
 import java.util.List;
 
-import com.g414.inno.db.impl.Types;
 import com.g414.inno.db.impl.Util;
 import com.g414.inno.jna.impl.InnoDB;
 import com.sun.jna.Pointer;
@@ -45,22 +44,34 @@ public class Cursor {
         return searchTuple;
     }
 
-    public SearchResultCode find(Tuple tupl, SearchMode searchMode) {
+    public SearchResultCode find(Tuple tupl, SearchMode searchMode,
+            boolean clusterAccess) {
         IntBuffer result = ByteBuffer.allocateDirect(4).asIntBuffer();
-        int err = InnoDB.ib_cursor_moveto(crsr.getValue(), tupl.tupl,
-                searchMode.getCode(), result);
+        err = InnoDB.ib_cursor_moveto(crsr.getValue(), tupl.tupl, searchMode
+                .getCode(), result);
+        if (clusterAccess) {
+            InnoDB.ib_cursor_set_cluster_access(crsr.getValue());
+        }
+
         assertCursorState(err);
 
         return SearchResultCode.fromCode(result.get());
     }
 
     public void readRow(Tuple tupl) {
-        int err = InnoDB.ib_cursor_read_row(crsr.getValue(), tupl.tupl);
+        if (!this.hasNext()) {
+            throw new IllegalStateException("no row at cursor!");
+        }
+        err = InnoDB.ib_cursor_read_row(crsr.getValue(), tupl.tupl);
         assertCursorState(err);
     }
 
+    public boolean isPositioned() {
+        return InnoDB.ib_cursor_is_positioned(crsr.getValue()) == InnoDB.IB_TRUE;
+    }
+
     public void deleteRow() {
-        int err = InnoDB.ib_cursor_delete_row(crsr.getValue());
+        err = InnoDB.ib_cursor_delete_row(crsr.getValue());
         assertCursorState(err);
     }
 
@@ -102,7 +113,7 @@ public class Cursor {
                 insertRow(tuple, tupleValues);
             }
         } finally {
-            InnoDB.ib_tuple_delete(tupl);
+            tuple.delete();
         }
     }
 
@@ -115,7 +126,7 @@ public class Cursor {
                 insertRow(tuple, tupleValues);
             }
         } finally {
-            InnoDB.ib_tuple_delete(tupl);
+            tuple.delete();
         }
     }
 
@@ -124,8 +135,7 @@ public class Cursor {
         TableDef def = tuple.getDef();
         List<ColumnDef> colDefs = def.getColDefs();
 
-        int len = values.size();
-        InnoDB.ib_tuple_clear(tupl.tupl);
+        int len = colDefs.size();
 
         for (int i = 0; i < len; i++) {
             Object val = values.get(i);
@@ -136,10 +146,11 @@ public class Cursor {
 
         Util.assertSuccess(InnoDB.ib_cursor_insert_row(crsr.getValue(),
                 tupl.tupl));
-        InnoDB.ib_tuple_clear(tupl.tupl);
+
+        tupl.clear();
     }
 
-    private void setValue(Tuple tupl, ColumnDef colDef, int i, Object val) {
+    private static void setValue(Tuple tupl, ColumnDef colDef, int i, Object val) {
         if (val == null) {
             if (colDef.getAttrs().contains(ColumnAttribute.NOT_NULL)) {
                 throw new IllegalArgumentException(
@@ -154,40 +165,17 @@ public class Cursor {
             case BINARY:
             case VARBINARY:
             case BLOB:
-                storeBytes(tupl, colDef, i, (byte[]) val);
+                TupleStorage.storeBytes(tupl, i, (byte[]) val);
                 break;
             case CHAR:
             case CHAR_ANYCHARSET:
             case VARCHAR:
             case VARCHAR_ANYCHARSET:
-                String stringVal = (String) val;
-                Util.assertSuccess(InnoDB.ib_col_set_value(tupl.tupl, i, Types
-                        .getString(stringVal), stringVal.length() + 1));
+                TupleStorage.storeString(tupl, i, (String) val);
                 break;
             case INT:
                 Number numVal = (Number) val;
-                switch (colDef.getLength()) {
-                case 1:
-                    Util.assertSuccess(InnoDB.ib_tuple_write_u8(tupl.tupl, i,
-                            numVal.byteValue()));
-                    break;
-                case 2:
-                    Util.assertSuccess(InnoDB.ib_tuple_write_u16(tupl.tupl, i,
-                            numVal.shortValue()));
-                    break;
-                case 4:
-                    Util.assertSuccess(InnoDB.ib_tuple_write_u32(tupl.tupl, i,
-                            numVal.intValue()));
-                    break;
-                case 8:
-                    Util.assertSuccess(InnoDB.ib_tuple_write_u64(tupl.tupl, i,
-                            numVal.longValue()));
-                    break;
-                default:
-                    throw new IllegalArgumentException(
-                            "integer type not supported for length: "
-                                    + colDef.getLength());
-                }
+                TupleStorage.storeInteger(tupl, colDef, i, numVal);
                 break;
             case DOUBLE:
                 Number dubVal = (Number) val;
@@ -206,9 +194,8 @@ public class Cursor {
         }
     }
 
-    private void storeBytes(Tuple tupl, ColumnDef colDef, int i, byte[] val) {
-        Util.assertSuccess(InnoDB.ib_col_set_value(tupl.tupl, i, Types
-                .getBytes(val), val.length));
+    public void reset() {
+        Util.assertSuccess(InnoDB.ib_cursor_reset(crsr.getValue()));
     }
 
     public void close() {

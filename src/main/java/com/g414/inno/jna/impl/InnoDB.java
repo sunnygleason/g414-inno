@@ -7,7 +7,7 @@ import java.nio.IntBuffer;
 import java.nio.LongBuffer;
 import java.nio.ShortBuffer;
 
-import com.g414.inno.db.impl.Types;
+import com.g414.inno.db.TupleStorage;
 import com.sun.jna.Callback;
 import com.sun.jna.Library;
 import com.sun.jna.Native;
@@ -953,7 +953,8 @@ public class InnoDB implements Library {
     public static native int ib_cfg_set(String name, Pointer value);
 
     public static int ib_cfg_set(String name, String value) {
-        return InnoDB.ib_cfg_set(name, Types.getString(value));
+        return InnoDB.ib_cfg_set(name, TupleStorage.getDirectMemoryString(value
+                .getBytes()));
     }
 
     public static int ib_cfg_set(String name, int value) {

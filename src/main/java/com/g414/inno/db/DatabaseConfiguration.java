@@ -19,7 +19,7 @@ public class DatabaseConfiguration {
     private int autoextendIncrementSizePages = 8;
     private String bufferPoolSize = "16M";
     private boolean pageChecksumsEnabled = true;
-    private String datafilePath = "ibdata1:256M:autoextend";
+    private String datafilePath = "ibdata1:16M:autoextend";
     private boolean doublewriteEnabled = true;
     private FileFormat fileFormat = FileFormat.BARRACUDA;
     private int fileIOThreads = 4;
@@ -28,7 +28,7 @@ public class DatabaseConfiguration {
     private int openFilesLimit = 300;
     private int lockWaitTimeoutSeconds = 60;
     private String logBufferSize = "1M";
-    private String logFileSize = "64M";
+    private String logFileSize = "16M";
     private String logFilesInGroup = "2";
     private String logFileHomeDirectory = "." + File.separator;
     private String dataHomeDir = "." + File.separator;

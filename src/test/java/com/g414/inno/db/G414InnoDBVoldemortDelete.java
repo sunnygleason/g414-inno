@@ -37,7 +37,7 @@ public class G414InnoDBVoldemortDelete {
             Tuple search = c.createSearchTuple(new TupleBuilder(
                     G414InnoDBTableDefs.TABLE_2).addValue(key));
 
-            SearchResultCode code = c.find(search, SearchMode.GE);
+            SearchResultCode code = c.find(search, SearchMode.GE, true);
             System.out.println(code);
             Tuple row = c.createReadTuple();
 
@@ -102,10 +102,7 @@ public class G414InnoDBVoldemortDelete {
 
     private void createTable(Database d) {
         if (!d.tableExists(G414InnoDBTableDefs.TABLE_2)) {
-            Schema s = d.createSchema(G414InnoDBTableDefs.TABLE_2_NAME,
-                    TableType.DYNAMIC, 0);
-
-            d.createTable(s, G414InnoDBTableDefs.TABLE_2);
+            d.createTable(G414InnoDBTableDefs.TABLE_2);
             System.out.println("Created table: "
                     + G414InnoDBTableDefs.TABLE_2_NAME);
         }

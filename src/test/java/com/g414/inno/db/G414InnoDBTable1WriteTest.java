@@ -68,10 +68,7 @@ public class G414InnoDBTable1WriteTest {
 
     private void createTable(Database d) {
         if (!d.tableExists(G414InnoDBTableDefs.TABLE_1)) {
-            Schema s = d.createSchema(G414InnoDBTableDefs.TABLE_1_NAME,
-                    TableType.COMPRESSED, 0);
-
-            d.createTable(s, G414InnoDBTableDefs.TABLE_1);
+            d.createTable(G414InnoDBTableDefs.TABLE_1);
             System.out.println("Created table: "
                     + G414InnoDBTableDefs.TABLE_1_NAME);
         }

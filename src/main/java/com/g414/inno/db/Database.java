@@ -137,24 +137,17 @@ public class Database {
         return new Transaction(trx);
     }
 
-    public Schema createSchema(String name, TableType format, int pageSize) {
-        PointerByReference schema = new PointerByReference();
-        Transaction trx = this.beginTransaction(Level.REPEATABLE_READ);
-        Util.assertSuccess(InnoDB.ib_schema_lock_exclusive(trx.getTrx()));
-        Util.assertSuccess(InnoDB.ib_table_schema_create(name, schema, format
-                .getCode(), pageSize));
-        trx.commit();
-
-        return new Schema(schema);
-    }
-
-    public void createTable(Schema schema, TableDef tableDef) {
+    public void createTable(TableDef tableDef) {
         boolean found = tableExists(tableDef);
 
         if (found) {
             throw new InnoException("table already exists: "
                     + tableDef.getName());
         }
+
+        PointerByReference schema = new PointerByReference();
+        Util.assertSuccess(InnoDB.ib_table_schema_create(tableDef.getName(),
+                schema, TableType.DYNAMIC.getCode(), 0));
 
         for (ColumnDef def : tableDef.getColumnDefs().values()) {
             int attr = 0;
@@ -163,14 +156,13 @@ public class Database {
             }
 
             if (!def.getType().equals(ColumnType.BLOB)) {
-                Util.assertSuccess(InnoDB
-                        .ib_table_schema_add_col(schema.getSchema().getValue(),
-                                def.getName(), def.getType().getCode(), attr,
-                                (short) 0, def.getLength().intValue()));
+                Util.assertSuccess(InnoDB.ib_table_schema_add_col(schema
+                        .getValue(), def.getName(), def.getType().getCode(),
+                        attr, (short) 0, def.getLength().intValue()));
             } else {
                 Util.assertSuccess(InnoDB.ib_table_schema_add_col(schema
-                        .getSchema().getValue(), def.getName(), def.getType()
-                        .getCode(), 0, (short) 0, 0));
+                        .getValue(), def.getName(), def.getType().getCode(), 0,
+                        (short) 0, 0));
             }
         }
 
@@ -178,7 +170,7 @@ public class Database {
                 .entrySet()) {
             PointerByReference index = new PointerByReference();
             Util.assertSuccess(InnoDB.ib_table_schema_add_index(schema
-                    .getSchema().getValue(), entry.getKey(), index));
+                    .getValue(), entry.getKey(), index));
             IndexDef part = entry.getValue();
 
             for (IndexPart col : part.getColumns()) {
@@ -195,21 +187,31 @@ public class Database {
             }
         }
 
-        // TODO: cleanup locking and transactions w/ finally
-        Transaction trx = this.beginTransaction(Level.REPEATABLE_READ);
         LongBuffer tableId = LongBuffer.allocate(1);
-
+        Transaction trx = this.beginTransaction(Level.REPEATABLE_READ);
         try {
             Util.assertSuccess(InnoDB.ib_schema_lock_exclusive(trx.getTrx()));
             Util.assertSuccess(InnoDB.ib_table_create(trx.getTrx(), schema
-                    .getSchema().getValue(), tableId));
+                    .getValue(), tableId));
             trx.commit();
         } catch (InnoException e) {
             trx.rollback();
 
             throw e;
         } finally {
-            // TODO - better handling of rollback/release
+            InnoDB.ib_table_schema_delete(schema.getValue());
+        }
+    }
+
+    public void dropTable(TableDef def) {
+        Transaction trx = this.beginTransaction(Level.REPEATABLE_READ);
+        try {
+            Util.assertSuccess(InnoDB.ib_schema_lock_exclusive(trx.getTrx()));
+            Util.assertSuccess(InnoDB
+                    .ib_table_drop(trx.getTrx(), def.getName()));
+            trx.commit();
+        } catch (InnoException e) {
+            throw e;
         }
     }
 
@@ -234,7 +236,7 @@ public class Database {
             }
         } finally {
             if (check != null) {
-                check.rollback();
+                check.commit();
             }
         }
         return found;

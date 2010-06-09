@@ -1,10 +1,12 @@
 package com.g414.inno.db;
 
 public class G414InnoDBTableDefs {
+    public static final String SCHEMA_NAME = "foo";
+    
     public static final String TABLE_1_NAME = "foo/bar";
     public static final TableDef TABLE_1;
 
-    public static final String TABLE_2_NAME = "foo/baz";
+    public static final String TABLE_2_NAME = "foo/vtest";
     public static final TableDef TABLE_2;
 
     static {

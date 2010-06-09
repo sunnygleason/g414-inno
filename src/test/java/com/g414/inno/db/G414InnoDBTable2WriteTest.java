@@ -1,7 +1,6 @@
 package com.g414.inno.db;
 
 import java.util.Date;
-import java.util.Random;
 
 import org.testng.annotations.Test;
 
@@ -28,20 +27,15 @@ public class G414InnoDBTable2WriteTest {
     private void insertRows(Database d) {
         Transaction t = d.beginTransaction(Level.REPEATABLE_READ);
         Cursor c = t.openTable(G414InnoDBTableDefs.TABLE_2);
-
-        Random random = new Random();
+        c.lock(Lock.INTENTION_EXCLUSIVE);
 
         Tuple tupl = c.createReadTuple();
 
-        for (int i = 0; i < 40000; i++) {
-            byte[] randKey = new byte[200];
-            byte[] randVersion = new byte[200];
-            byte[] randValue = new byte[1024];
+        for (int i = 0; i < 10000; i++) {
+            byte[] randKey = ("hi_" + i).getBytes();
+            byte[] randVersion = Integer.toString(i).getBytes();
 
-            random.nextBytes(randKey);
-            random.nextBytes(randVersion);
-            random.nextBytes(randValue);
-
+            byte[] randValue = ("wrld_" + i).getBytes();
             TupleBuilder r = new TupleBuilder(G414InnoDBTableDefs.TABLE_2);
 
             r.addValue(randKey);
@@ -50,10 +44,26 @@ public class G414InnoDBTable2WriteTest {
 
             c.insertRow(tupl, r);
 
-            if (i % 10000 == 0) {
+            if (i % 1000 == 0) {
                 System.out.println(new Date() + " make row " + i);
             }
         }
+
+        TupleBuilder r = new TupleBuilder(G414InnoDBTableDefs.TABLE_2);
+
+        r.addValue(new byte[0]);
+        r.addValue("hi1".getBytes());
+        r.addValue(new byte[0]);
+
+        c.insertRow(tupl, r);
+
+        r = new TupleBuilder(G414InnoDBTableDefs.TABLE_2);
+
+        r.addValue(new byte[0]);
+        r.addValue("hi2".getBytes());
+        r.addValue(null);
+
+        c.insertRow(tupl, r);
 
         tupl.delete();
 
@@ -64,10 +74,7 @@ public class G414InnoDBTable2WriteTest {
 
     private void createTable(Database d) {
         if (!d.tableExists(G414InnoDBTableDefs.TABLE_2)) {
-            Schema s = d.createSchema(G414InnoDBTableDefs.TABLE_2_NAME,
-                    TableType.DYNAMIC, 0);
-
-            d.createTable(s, G414InnoDBTableDefs.TABLE_2);
+            d.createTable(G414InnoDBTableDefs.TABLE_2);
             System.out.println("Created table: "
                     + G414InnoDBTableDefs.TABLE_2_NAME);
         }

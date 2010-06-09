@@ -11,8 +11,8 @@ public class TableBuilder {
     private final String name;
     private final Map<String, ColumnDef> columns;
     private final Map<String, List<IndexPart>> indexes;
-    private volatile AtomicInteger index = new AtomicInteger();
-
+    private volatile AtomicInteger index = new AtomicInteger(); 
+    
     public TableBuilder(String name) {
         this.name = name;
         this.columns = new LinkedHashMap<String, ColumnDef>();

@@ -1,16 +1,10 @@
 package com.g414.inno.db;
 
-import java.math.BigInteger;
-import java.nio.ByteBuffer;
-import java.nio.IntBuffer;
-import java.nio.LongBuffer;
-import java.nio.ShortBuffer;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-import com.g414.inno.db.impl.Util;
 import com.g414.inno.jna.impl.InnoDB;
 import com.sun.jna.Pointer;
 
@@ -35,17 +29,16 @@ public class Tuple {
             case BINARY:
             case VARBINARY:
             case BLOB:
-                values.add(getBytes(i));
+                values.add(TupleStorage.loadBytes(this, i));
                 break;
             case CHAR:
             case CHAR_ANYCHARSET:
             case VARCHAR:
             case VARCHAR_ANYCHARSET:
-                values.add(getString(i));
+                values.add(TupleStorage.loadString(this, i));
                 break;
             case INT:
-                values.add(getInteger(i, def.getLength(), !def.getAttrs()
-                        .contains(ColumnAttribute.UNSIGNED)));
+                values.add(TupleStorage.loadInteger(this, i, def));
                 break;
             default:
                 throw new IllegalArgumentException("unsupported datatype: "
@@ -68,17 +61,16 @@ public class Tuple {
             case BINARY:
             case VARBINARY:
             case BLOB:
-                values.put(def.getName(), getBytes(i));
+                values.put(def.getName(), TupleStorage.loadBytes(this, i));
                 break;
             case CHAR:
             case CHAR_ANYCHARSET:
             case VARCHAR:
             case VARCHAR_ANYCHARSET:
-                values.put(def.getName(), getString(i));
+                values.put(def.getName(), TupleStorage.loadString(this, i));
                 break;
             case INT:
-                values.put(def.getName(), getInteger(i, def.getLength(), !def
-                        .getAttrs().contains(ColumnAttribute.UNSIGNED)));
+                values.put(def.getName(), TupleStorage.loadInteger(this, i, def));
                 break;
             default:
                 throw new IllegalArgumentException("unsupported datatype: "
@@ -89,67 +81,16 @@ public class Tuple {
         return values;
     }
 
-    public byte[] getBytes(int index) {
-        int len = InnoDB.ib_col_get_len(tupl, index);
-        if (len == InnoDB.IB_SQL_NULL) {
-            return null;
-        }
-
-        if (len == 0) {
-            return new byte[0];
-        }
-
-        return InnoDB.ib_col_get_value(tupl, index).getByteArray(0, len);
+    public byte[] getBytes(int i) {
+        return TupleStorage.loadBytes(this, i);
     }
 
-    public String getString(int index) {
-        InnoDB.ib_col_meta_t meta = new InnoDB.ib_col_meta_t();
-        if (InnoDB.ib_col_get_meta(tupl, index, meta) == InnoDB.IB_SQL_NULL) {
-            return null;
-        }
-
-        return InnoDB.ib_col_get_value(tupl, index).getString(0);
+    public String getString(int i) {
+        return TupleStorage.loadString(this, i);
     }
 
-    public Number getInteger(int index, Integer length, boolean signed) {
-        ByteBuffer buf = ByteBuffer.allocateDirect(length);
-
-        InnoDB.ib_col_meta_t meta = new InnoDB.ib_col_meta_t();
-        if (InnoDB.ib_col_get_meta(tupl, index, meta) == InnoDB.IB_SQL_NULL) {
-            return null;
-        }
-
-        switch (length) {
-        case 1:
-            Util.assertSuccess(InnoDB.ib_tuple_read_u8(tupl, index, buf));
-            break;
-
-        case 2:
-            ShortBuffer sbuf = buf.asShortBuffer();
-            Util.assertSuccess(InnoDB.ib_tuple_read_u16(tupl, index, sbuf));
-            break;
-
-        case 4:
-            IntBuffer ibuf = buf.asIntBuffer();
-            Util.assertSuccess(InnoDB.ib_tuple_read_u32(tupl, index, ibuf));
-            break;
-
-        case 8:
-            LongBuffer lbuf = buf.asLongBuffer();
-            Util.assertSuccess(InnoDB.ib_tuple_read_u64(tupl, index, lbuf));
-            break;
-
-        default:
-            throw new IllegalArgumentException("Invalid length: " + length);
-        }
-
-        byte[] theBytes = new byte[length];
-        int i = 0;
-        for (int j = length - 1; j >= 0; j--) {
-            theBytes[i] = buf.get(j);
-            i += 1;
-        }
-        return signed ? new BigInteger(theBytes) : new BigInteger(1, theBytes);
+    public Number getInteger(int i) {
+        return TupleStorage.loadInteger(this, i, table.getColDefs().get(i));
     }
 
     public void clear() {
@@ -157,6 +98,8 @@ public class Tuple {
     }
 
     public void delete() {
-        InnoDB.ib_tuple_delete(tupl);
+        if (tupl != null && !tupl.equals(Pointer.NULL)) {
+            InnoDB.ib_tuple_delete(tupl);
+        }
     }
 }
