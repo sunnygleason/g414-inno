@@ -3,6 +3,7 @@ package com.g414.inno.db;
 import com.g414.inno.jna.impl.InnoDB;
 
 public enum MatchMode {
+    /* see InnoDB.ib_match_mode_t */
     CLOSEST(InnoDB.ib_match_mode_t.IB_CLOSEST_MATCH), EXACT(
             InnoDB.ib_match_mode_t.IB_EXACT_MATCH), EXACT_PREFIX(
             InnoDB.ib_match_mode_t.IB_EXACT_PREFIX);

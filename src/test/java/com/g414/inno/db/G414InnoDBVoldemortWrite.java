@@ -16,7 +16,7 @@ public class G414InnoDBVoldemortWrite {
         try {
             d.createDatabase(DB_NAME);
 
-            createTable(d);
+            G414InnoDBTableDefs.createTables(d);
 
             insertRows(d);
         } catch (Exception e) {
@@ -30,16 +30,17 @@ public class G414InnoDBVoldemortWrite {
     private void insert(Database d, byte[] key, byte[] thisVersion, byte[] value) {
         System.out.println("put() : " + new String(key));
 
-        Transaction t = d.beginTransaction(Level.REPEATABLE_READ);
+        Transaction t = d.beginTransaction(TransactionLevel.REPEATABLE_READ);
         Cursor c = t.openTable(G414InnoDBTableDefs.TABLE_2);
+        c.setClusterAccess();
 
         try {
-            Tuple search = c.createSearchTuple(new TupleBuilder(
-                    G414InnoDBTableDefs.TABLE_2).addValue(key));
+            Tuple search = c.createClusteredIndexSearchTuple(new TupleBuilder(
+                    G414InnoDBTableDefs.TABLE_2).addValues(key));
 
-            SearchResultCode code = c.find(search, SearchMode.GE, true);
+            SearchResultCode code = c.find(search, SearchMode.GE);
             System.out.println(code);
-            Tuple row = c.createReadTuple();
+            Tuple row = c.createClusteredIndexReadTuple();
 
             while (c.hasNext()) {
                 c.readRow(row);
@@ -53,12 +54,6 @@ public class G414InnoDBVoldemortWrite {
                     System.out.println("got it!");
                 }
 
-                byte[] thatVersionBytes = row.getBytes(1);
-
-                // System.out.println("V: "
-                // + new String(Hex.encodeHex(thisVersion)) + " "
-                // + new String(Hex.encodeHex(thatVersionBytes)));
-
                 System.out.println("before : deleting");
                 c.deleteRow();
 
@@ -66,10 +61,8 @@ public class G414InnoDBVoldemortWrite {
                 c.next();
             }
 
-            TupleBuilder insert = new TupleBuilder(G414InnoDBTableDefs.TABLE_2);
-            insert.addValue(key);
-            insert.addValue(thisVersion);
-            insert.addValue(value);
+            TupleBuilder insert = new TupleBuilder(G414InnoDBTableDefs.TABLE_2)
+                    .addValues(key, thisVersion, value);
 
             System.out.println("inserting");
             c.insertRow(row, insert);
@@ -82,13 +75,13 @@ public class G414InnoDBVoldemortWrite {
     }
 
     private void insertRows(Database d) {
-        Transaction t = d.beginTransaction(Level.REPEATABLE_READ);
+        Transaction t = d.beginTransaction(TransactionLevel.REPEATABLE_READ);
         Cursor c = t.openTable(G414InnoDBTableDefs.TABLE_2);
-        c.lock(Lock.INTENTION_EXCLUSIVE);
+        c.lock(LockMode.INTENTION_EXCLUSIVE);
 
         Random random = new Random();
 
-        Tuple tupl = c.createReadTuple();
+        Tuple tupl = c.createClusteredIndexReadTuple();
 
         for (int i = 0; i < 300; i++) {
             byte[] randKey = new byte[1];
@@ -112,13 +105,5 @@ public class G414InnoDBVoldemortWrite {
         System.out.println(new Date() + " done.");
         c.close();
         t.commit();
-    }
-
-    private void createTable(Database d) {
-        if (!d.tableExists(G414InnoDBTableDefs.TABLE_2)) {
-            d.createTable(G414InnoDBTableDefs.TABLE_2);
-            System.out.println("Created table: "
-                    + G414InnoDBTableDefs.TABLE_2_NAME);
-        }
     }
 }

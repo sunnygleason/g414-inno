@@ -1,23 +1,21 @@
 package com.g414.inno.db;
 
-import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
-
-import com.g414.inno.db.TableBuilder.IndexPart;
+import java.util.Map;
 
 public class IndexDef {
     private final String name;
     private final boolean clustered;
     private final boolean unique;
-    private final List<IndexPart> columns;
+    private final List<ColumnDef> columns;
+    private final Map<String, Integer> prefixLenOverrides;
 
-    public IndexDef(String name, List<IndexPart> columns, boolean clustered,
+    public IndexDef(String name, List<ColumnDef> columns,
+            Map<String, Integer> prefixLenOverrides, boolean clustered,
             boolean unique) {
         this.name = name;
-        List<IndexPart> newColumns = new ArrayList<IndexPart>();
-        newColumns.addAll(columns);
-        this.columns = Collections.unmodifiableList(newColumns);
+        this.columns = columns;
+        this.prefixLenOverrides = prefixLenOverrides;
         this.clustered = clustered;
         this.unique = unique;
     }
@@ -26,8 +24,12 @@ public class IndexDef {
         return name;
     }
 
-    public List<IndexPart> getColumns() {
+    public List<ColumnDef> getColumns() {
         return columns;
+    }
+
+    public Map<String, Integer> getPrefixLenOverrides() {
+        return prefixLenOverrides;
     }
 
     public boolean isClustered() {

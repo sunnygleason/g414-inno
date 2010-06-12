@@ -1,6 +1,8 @@
 package com.g414.inno.db;
 
+
 public enum ColumnAttribute {
+    /* see InnoDB.ib_col_attr_t */
     NONE(0), NOT_NULL(1), UNSIGNED(2), NOT_USED(3), COL_CUSTOM1(4), COL_CUSTOM2(
             5), COL_CUSTOM3(6);
 

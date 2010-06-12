@@ -13,7 +13,7 @@ public class G414InnoDBTable2WriteTest {
         try {
             d.createDatabase(DB_NAME);
 
-            createTable(d);
+            G414InnoDBTableDefs.createTables(d);
 
             insertRows(d);
         } catch (Exception e) {
@@ -25,11 +25,11 @@ public class G414InnoDBTable2WriteTest {
     }
 
     private void insertRows(Database d) {
-        Transaction t = d.beginTransaction(Level.REPEATABLE_READ);
+        Transaction t = d.beginTransaction(TransactionLevel.REPEATABLE_READ);
         Cursor c = t.openTable(G414InnoDBTableDefs.TABLE_2);
-        c.lock(Lock.INTENTION_EXCLUSIVE);
+        c.lock(LockMode.INTENTION_EXCLUSIVE);
 
-        Tuple tupl = c.createReadTuple();
+        Tuple tupl = c.createClusteredIndexReadTuple();
 
         for (int i = 0; i < 10000; i++) {
             byte[] randKey = ("hi_" + i).getBytes();
@@ -38,9 +38,7 @@ public class G414InnoDBTable2WriteTest {
             byte[] randValue = ("wrld_" + i).getBytes();
             TupleBuilder r = new TupleBuilder(G414InnoDBTableDefs.TABLE_2);
 
-            r.addValue(randKey);
-            r.addValue(randVersion);
-            r.addValue(randValue);
+            r.addValues(randKey, randVersion, randValue);
 
             c.insertRow(tupl, r);
 
@@ -51,17 +49,17 @@ public class G414InnoDBTable2WriteTest {
 
         TupleBuilder r = new TupleBuilder(G414InnoDBTableDefs.TABLE_2);
 
-        r.addValue(new byte[0]);
-        r.addValue("hi1".getBytes());
-        r.addValue(new byte[0]);
+        r.addValues(new byte[0]);
+        r.addValues("hi1".getBytes());
+        r.addValues(new byte[0]);
 
         c.insertRow(tupl, r);
 
         r = new TupleBuilder(G414InnoDBTableDefs.TABLE_2);
 
-        r.addValue(new byte[0]);
-        r.addValue("hi2".getBytes());
-        r.addValue(null);
+        r.addValues(new byte[0]);
+        r.addValues("hi2".getBytes());
+        r.addValues((Object) null);
 
         c.insertRow(tupl, r);
 
@@ -70,13 +68,5 @@ public class G414InnoDBTable2WriteTest {
         System.out.println(new Date() + " done.");
         c.close();
         t.commit();
-    }
-
-    private void createTable(Database d) {
-        if (!d.tableExists(G414InnoDBTableDefs.TABLE_2)) {
-            d.createTable(G414InnoDBTableDefs.TABLE_2);
-            System.out.println("Created table: "
-                    + G414InnoDBTableDefs.TABLE_2_NAME);
-        }
     }
 }

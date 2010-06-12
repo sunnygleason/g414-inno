@@ -3,6 +3,7 @@ package com.g414.inno.db;
 import com.g414.inno.jna.impl.InnoDB;
 
 public enum SearchMode {
+    /* see InnoDB.ib_srch_mode_t.IB_CUR_G */
     G(InnoDB.ib_srch_mode_t.IB_CUR_G), GE(InnoDB.ib_srch_mode_t.IB_CUR_GE), L(
             InnoDB.ib_srch_mode_t.IB_CUR_L), LE(InnoDB.ib_srch_mode_t.IB_CUR_LE);
 

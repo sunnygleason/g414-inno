@@ -6,15 +6,15 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-
 public class TableDef {
     private final String name;
     private final Map<String, ColumnDef> columnDefs;
     private final Map<String, IndexDef> indexDefs;
     private final List<ColumnDef> colDefs;
+    private final IndexDef primaryIndex;
 
     public TableDef(String name, Map<String, ColumnDef> columnDefs,
-            Map<String, IndexDef> indexDefs) {
+            Map<String, IndexDef> indexDefs, IndexDef primaryIndex) {
         this.name = name;
 
         Map<String, ColumnDef> newCols = new LinkedHashMap<String, ColumnDef>();
@@ -28,6 +28,8 @@ public class TableDef {
         Map<String, IndexDef> newIdxs = new LinkedHashMap<String, IndexDef>();
         newIdxs.putAll(indexDefs);
         this.indexDefs = Collections.unmodifiableMap(newIdxs);
+
+        this.primaryIndex = primaryIndex;
     }
 
     public String getName() {
@@ -44,5 +46,9 @@ public class TableDef {
 
     public Map<String, IndexDef> getIndexDefs() {
         return indexDefs;
+    }
+
+    public IndexDef getPrimaryIndex() {
+        return primaryIndex;
     }
 }

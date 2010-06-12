@@ -15,13 +15,13 @@ public class G414InnoDBTable2ReadTest {
     }
 
     private void readRows(Database d) {
-        Transaction t = d.beginTransaction(Level.REPEATABLE_READ);
+        Transaction t = d.beginTransaction(TransactionLevel.REPEATABLE_READ);
         Cursor c = t.openTable(G414InnoDBTableDefs.TABLE_2);
-        c.lock(Lock.INTENTION_EXCLUSIVE);
+        c.lock(LockMode.INTENTION_EXCLUSIVE);
 
         c.first();
 
-        Tuple tupl = c.createReadTuple();
+        Tuple tupl = c.createClusteredIndexReadTuple();
 
         int i = 0;
         System.out.println(new Date() + " read...");

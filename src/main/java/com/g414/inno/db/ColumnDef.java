@@ -7,7 +7,6 @@ import java.util.EnumSet;
 import java.util.List;
 import java.util.Set;
 
-
 public class ColumnDef {
     private final Integer index;
     private final String name;
@@ -49,5 +48,9 @@ public class ColumnDef {
 
     public Integer getLength() {
         return length;
+    }
+
+    public boolean is(ColumnAttribute attr) {
+        return attrs.contains(attr);
     }
 }

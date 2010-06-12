@@ -29,7 +29,7 @@ public class DatabaseConfiguration {
     private int lockWaitTimeoutSeconds = 60;
     private String logBufferSize = "1M";
     private String logFileSize = "16M";
-    private String logFilesInGroup = "2";
+    private int logFilesInGroup = 2;
     private String logFileHomeDirectory = "." + File.separator;
     private String dataHomeDir = "." + File.separator;
     private int maxDirtyPagesPct = 75;
@@ -181,11 +181,11 @@ public class DatabaseConfiguration {
         this.logFileSize = logFileSize;
     }
 
-    public String getLogFilesInGroup() {
+    public int getLogFilesInGroup() {
         return logFilesInGroup;
     }
 
-    public void setLogFilesInGroup(String logFilesInGroup) {
+    public void setLogFilesInGroup(int logFilesInGroup) {
         this.logFilesInGroup = logFilesInGroup;
     }
 

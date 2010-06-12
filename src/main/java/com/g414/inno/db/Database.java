@@ -3,8 +3,6 @@ package com.g414.inno.db;
 import java.nio.LongBuffer;
 import java.util.Map;
 
-import com.g414.inno.db.TableBuilder.IndexPart;
-import com.g414.inno.db.impl.Util;
 import com.g414.inno.jna.impl.InnoDB;
 import com.sun.jna.Pointer;
 import com.sun.jna.ptr.PointerByReference;
@@ -115,9 +113,20 @@ public class Database {
                 .getIoCapacityIOPS()));
         Util.assertSuccess(InnoDB.ib_cfg_set("sync_spin_loops", c
                 .getSyncSpinLoops()));
+        Util.assertSuccess(InnoDB.ib_cfg_set("lock_wait_timeout", c
+                .getLockWaitTimeoutSeconds()));
 
         Util.assertSuccess(InnoDB.ib_cfg_set("write_io_threads", c
                 .getWriteIOThreads()));
+        
+
+
+        // Util.assertSuccess(InnoDB.ib_cfg_set("log_buffer_size", c
+        // .getLogBufferSize()));
+        // Util.assertSuccess(InnoDB.ib_cfg_set("log_file_size", c
+        // .getLogFileSize()));
+        // Util.assertSuccess(InnoDB.ib_cfg_set("log_files_in_group", c
+        // .getLogFilesInGroup()));
 
         Util.assertSuccess(InnoDB.ib_startup(c.getFileFormat().getCode()));
     }
@@ -131,23 +140,25 @@ public class Database {
         Util.assertSuccess(InnoDB.ib_database_drop(databaseName));
     }
 
-    public Transaction beginTransaction(Level level) {
+    public Transaction beginTransaction(TransactionLevel level) {
         Pointer trx = InnoDB.ib_trx_begin(level.getCode());
 
         return new Transaction(trx);
     }
 
     public void createTable(TableDef tableDef) {
-        boolean found = tableExists(tableDef);
+        this.createTable(tableDef, TableType.DYNAMIC, 0);
+    }
 
-        if (found) {
+    public void createTable(TableDef tableDef, TableType type, int pageSize) {
+        if (tableExists(tableDef)) {
             throw new InnoException("table already exists: "
                     + tableDef.getName());
         }
 
         PointerByReference schema = new PointerByReference();
         Util.assertSuccess(InnoDB.ib_table_schema_create(tableDef.getName(),
-                schema, TableType.DYNAMIC.getCode(), 0));
+                schema, type.getCode(), pageSize));
 
         for (ColumnDef def : tableDef.getColumnDefs().values()) {
             int attr = 0;
@@ -172,10 +183,14 @@ public class Database {
             Util.assertSuccess(InnoDB.ib_table_schema_add_index(schema
                     .getValue(), entry.getKey(), index));
             IndexDef part = entry.getValue();
+            Map<String, Integer> prefixLenOverrides = part
+                    .getPrefixLenOverrides();
 
-            for (IndexPart col : part.getColumns()) {
+            for (ColumnDef col : part.getColumns()) {
+                int prefixLenOverride = prefixLenOverrides.containsKey(col
+                        .getName()) ? prefixLenOverrides.get(col.getName()) : 0;
                 Util.assertSuccess(InnoDB.ib_index_schema_add_col(index
-                        .getValue(), col.getColumn(), col.getPrefixLen()));
+                        .getValue(), col.getName(), prefixLenOverride));
             }
 
             if (part.isClustered()) {
@@ -188,7 +203,8 @@ public class Database {
         }
 
         LongBuffer tableId = LongBuffer.allocate(1);
-        Transaction trx = this.beginTransaction(Level.REPEATABLE_READ);
+        Transaction trx = this
+                .beginTransaction(TransactionLevel.REPEATABLE_READ);
         try {
             Util.assertSuccess(InnoDB.ib_schema_lock_exclusive(trx.getTrx()));
             Util.assertSuccess(InnoDB.ib_table_create(trx.getTrx(), schema
@@ -204,7 +220,8 @@ public class Database {
     }
 
     public void dropTable(TableDef def) {
-        Transaction trx = this.beginTransaction(Level.REPEATABLE_READ);
+        Transaction trx = this
+                .beginTransaction(TransactionLevel.REPEATABLE_READ);
         try {
             Util.assertSuccess(InnoDB.ib_schema_lock_exclusive(trx.getTrx()));
             Util.assertSuccess(InnoDB
@@ -215,9 +232,10 @@ public class Database {
         }
     }
 
-    public Long truncateTable(String tableName) {
+    public Long truncateTable(TableDef tableDef) {
         LongBuffer tableId = LongBuffer.allocate(1);
-        Util.assertSuccess(InnoDB.ib_table_truncate(tableName, tableId));
+        Util.assertSuccess(InnoDB
+                .ib_table_truncate(tableDef.getName(), tableId));
 
         return tableId.get();
     }
@@ -226,7 +244,7 @@ public class Database {
         boolean found = false;
         Transaction check = null;
         try {
-            check = this.beginTransaction(Level.REPEATABLE_READ);
+            check = this.beginTransaction(TransactionLevel.REPEATABLE_READ);
             check.openTable(tableDef);
 
             found = true;

@@ -9,97 +9,137 @@ import com.g414.inno.jna.impl.InnoDB;
 import com.sun.jna.Pointer;
 
 public class Tuple {
-    protected final TableDef table;
+    protected final List<ColumnDef> columns;
     protected Pointer tupl;
+    private final int size;
+    private boolean deleted = false;
 
-    public Tuple(Pointer tupl, TableDef table) {
+    public Tuple(Pointer tupl, List<ColumnDef> columns) {
         this.tupl = tupl;
-        this.table = table;
+        this.columns = columns;
+        this.size = columns.size();
     }
 
     public List<Object> values() {
-        List<ColumnDef> colDefs = table.getColDefs();
-        final int len = colDefs.size();
+        if (deleted) {
+            throw new IllegalStateException("tuple already deleted!");
+        }
 
-        List<Object> values = new ArrayList<Object>(len);
+        List<Object> values = new ArrayList<Object>(this.columns.size());
 
-        for (int i = 0; i < len; i++) {
-            ColumnDef def = colDefs.get(i);
-            switch (def.getType()) {
-            case BINARY:
-            case VARBINARY:
-            case BLOB:
-                values.add(TupleStorage.loadBytes(this, i));
-                break;
-            case CHAR:
-            case CHAR_ANYCHARSET:
-            case VARCHAR:
-            case VARCHAR_ANYCHARSET:
-                values.add(TupleStorage.loadString(this, i));
-                break;
-            case INT:
-                values.add(TupleStorage.loadInteger(this, i, def));
-                break;
-            default:
-                throw new IllegalArgumentException("unsupported datatype: "
-                        + def.getType());
-            }
+        for (ColumnDef def : this.columns) {
+            values.add(getValue(def));
         }
 
         return values;
     }
 
     public Map<String, Object> valueMap() {
-        List<ColumnDef> colDefs = table.getColDefs();
-        final int len = colDefs.size();
+        if (deleted) {
+            throw new IllegalStateException("tuple already deleted!");
+        }
 
-        Map<String, Object> values = new LinkedHashMap<String, Object>(len);
+        Map<String, Object> values = new LinkedHashMap<String, Object>(
+                this.columns.size());
 
-        for (int i = 0; i < len; i++) {
-            ColumnDef def = colDefs.get(i);
-            switch (def.getType()) {
-            case BINARY:
-            case VARBINARY:
-            case BLOB:
-                values.put(def.getName(), TupleStorage.loadBytes(this, i));
-                break;
-            case CHAR:
-            case CHAR_ANYCHARSET:
-            case VARCHAR:
-            case VARCHAR_ANYCHARSET:
-                values.put(def.getName(), TupleStorage.loadString(this, i));
-                break;
-            case INT:
-                values.put(def.getName(), TupleStorage.loadInteger(this, i, def));
-                break;
-            default:
-                throw new IllegalArgumentException("unsupported datatype: "
-                        + def.getType());
-            }
+        for (ColumnDef def : this.columns) {
+            values.put(def.getName(), this.getValue(def));
         }
 
         return values;
     }
 
     public byte[] getBytes(int i) {
+        if (deleted) {
+            throw new IllegalStateException("tuple already deleted!");
+        }
+
+        if (i >= this.size) {
+            throw new IndexOutOfBoundsException("invalid index: " + i);
+        }
+
+        ColumnDef def = this.columns.get(i);
+        if (!def.getType().isByteArrayType()) {
+            throw new IllegalArgumentException("invalid column "
+                    + def.getName() + ", not byte[]: " + i);
+        }
+
         return TupleStorage.loadBytes(this, i);
     }
 
     public String getString(int i) {
+        if (deleted) {
+            throw new IllegalStateException("tuple already deleted!");
+        }
+
+        if (i >= this.size) {
+            throw new IndexOutOfBoundsException("invalid index: " + i);
+        }
+
+        ColumnDef def = this.columns.get(i);
+        if (def.getType().isStringType()) {
+            throw new IllegalArgumentException("invalid column "
+                    + def.getName() + ", not String: " + i);
+        }
+
         return TupleStorage.loadString(this, i);
     }
 
     public Number getInteger(int i) {
-        return TupleStorage.loadInteger(this, i, table.getColDefs().get(i));
+        if (deleted) {
+            throw new IllegalStateException("tuple already deleted!");
+        }
+
+        if (i >= this.size) {
+            throw new IndexOutOfBoundsException("invalid index: " + i);
+        }
+
+        ColumnDef def = this.columns.get(i);
+        if (!def.getType().isIntegerType()) {
+            throw new IllegalArgumentException("invalid column "
+                    + def.getName() + ", not integer type: " + i);
+        }
+
+        return TupleStorage.loadInteger(this, i, def.getLength(), !def
+                .is(ColumnAttribute.UNSIGNED));
     }
 
     public void clear() {
+        if (deleted) {
+            throw new IllegalStateException("tuple is deleted!");
+        }
+
         tupl = InnoDB.ib_tuple_clear(tupl);
     }
 
     public void delete() {
+        if (deleted) {
+            throw new IllegalStateException("tuple is deleted!");
+        }
+
         if (tupl != null && !tupl.equals(Pointer.NULL)) {
             InnoDB.ib_tuple_delete(tupl);
+        }
+    }
+
+    private Object getValue(ColumnDef def) {
+        switch (def.getType()) {
+        case BINARY:
+        case VARBINARY:
+        case BLOB:
+            return TupleStorage.loadBytes(this, def.getIndex());
+        case CHAR:
+        case CHAR_ANYCHARSET:
+        case VARCHAR:
+        case VARCHAR_ANYCHARSET:
+            return TupleStorage.loadString(this, def.getIndex());
+        case INT:
+            return TupleStorage.loadInteger(this, def.getIndex(), def
+                    .getLength(), !def.getAttrs().contains(
+                    ColumnAttribute.UNSIGNED));
+        default:
+            throw new IllegalArgumentException("unsupported datatype: "
+                    + def.getType());
         }
     }
 }

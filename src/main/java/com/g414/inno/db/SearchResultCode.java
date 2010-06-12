@@ -1,6 +1,7 @@
 package com.g414.inno.db;
 
 public enum SearchResultCode {
+    /* returns -1, 0 or 1 based on search result */
     BEFORE(0), EQUALS(1), AFTER(2);
 
     private final int code;

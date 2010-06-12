@@ -4,7 +4,6 @@ import java.util.Date;
 
 import org.testng.annotations.Test;
 
-
 @Test
 public class G414InnoDBTable1ReadTest {
     public void testInno() {
@@ -16,33 +15,72 @@ public class G414InnoDBTable1ReadTest {
     }
 
     private void readRows(Database d) {
-        Transaction t = d.beginTransaction(Level.REPEATABLE_READ);
-        Cursor c = t.openTable(G414InnoDBTableDefs.TABLE_1);
-        c.lock(Lock.INTENTION_EXCLUSIVE);
-        c.first();
+        {
+            Transaction t = d
+                    .beginTransaction(TransactionLevel.REPEATABLE_READ);
+            Cursor c = t.openTable(G414InnoDBTableDefs.TABLE_1);
+            c.last();
 
-        Tuple tupl = c.createReadTuple();
+            Tuple tupl = c.createClusteredIndexReadTuple();
 
-        int i = 0;
-        System.out.println(new Date() + " read...");
+            int i = 0;
+            System.out.println(new Date() + " read...");
 
-        while (c.hasNext()) {
-            c.readRow(tupl);
+            while (c.hasNext()) {
+                c.readRow(tupl);
 
-            if (i % 50000 == 0) {
+                // if (i % 50000 == 0) {
                 System.out.println(tupl.valueMap());
-                System.out.println(new Date() + " read " + i);
+                // System.out.println(new Date() + " read " + i);
+                // }
+
+                c.prev();
+
+                tupl.clear();
+                i += 1;
             }
+            System.out.println(new Date() + " read " + i);
+            System.out.println(new Date() + " done.");
 
-            c.next();
+            tupl.delete();
 
-            tupl.clear();
-            i += 1;
+            c.close();
+            t.commit();
         }
-        System.out.println(new Date() + " read " + i);
-        System.out.println(new Date() + " done.");
+        {
+            Transaction t = d
+                    .beginTransaction(TransactionLevel.REPEATABLE_READ);
+            Cursor c = t.openTable(G414InnoDBTableDefs.TABLE_1);
 
-        c.close();
-        t.commit();
+            Cursor sec = c.openIndex("c3");
+            sec.last();
+
+            int i = 0;
+            System.out.println(new Date() + " read sec...");
+            Tuple tupl = sec.createSecondaryIndexReadTuple();
+
+            while (sec.hasNext()) {
+                sec.readRow(tupl);
+
+                if (i % 50000 == 0) {
+                    System.out.println(tupl.valueMap());
+                    System.out.println(new Date() + " read " + i);
+                }
+
+                sec.prev();
+
+                tupl.clear();
+                i += 1;
+            }
+            System.out.println(new Date() + " read " + i);
+            System.out.println(new Date() + " done.");
+
+            tupl.delete();
+
+            sec.close();
+            c.close();
+            t.commit();
+        }
+
     }
 }

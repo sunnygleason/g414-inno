@@ -2,7 +2,7 @@ package com.g414.inno.db;
 
 public class G414InnoDBTableDefs {
     public static final String SCHEMA_NAME = "foo";
-    
+
     public static final String TABLE_1_NAME = "foo/bar";
     public static final TableDef TABLE_1;
 
@@ -20,6 +20,9 @@ public class G414InnoDBTableDefs {
 
         b1.addIndex("c1_c2", "c1", 0, true, true);
         b1.addIndex("c1_c2", "c2", 0, true, true);
+
+        b1.addIndex("c3", "c3", 0, false, false);
+
         TABLE_1 = b1.build();
 
         TableBuilder b2 = new TableBuilder(TABLE_2_NAME);
@@ -33,5 +36,19 @@ public class G414InnoDBTableDefs {
         b2.addIndex("PRIMARY", "version_", 0, true, true);
 
         TABLE_2 = b2.build();
+    }
+
+    public static void createTables(Database d) {
+        if (!d.tableExists(G414InnoDBTableDefs.TABLE_1)) {
+            d.createTable(G414InnoDBTableDefs.TABLE_1);
+            System.out.println("Created table: "
+                    + G414InnoDBTableDefs.TABLE_1_NAME);
+        }
+
+        if (!d.tableExists(G414InnoDBTableDefs.TABLE_2)) {
+            d.createTable(G414InnoDBTableDefs.TABLE_2);
+            System.out.println("Created table: "
+                    + G414InnoDBTableDefs.TABLE_2_NAME);
+        }
     }
 }

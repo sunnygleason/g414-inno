@@ -5,7 +5,7 @@ package com.g414.inno.db;
 
 import com.g414.inno.jna.impl.InnoDB;
 
-public enum State {
+public enum TransactionState {
     NOT_STARTED(InnoDB.ib_trx_state_t.IB_TRX_NOT_STARTED), ACTIVE(
             InnoDB.ib_trx_state_t.IB_TRX_ACTIVE), COMMITTED_IN_MEMORY(
             InnoDB.ib_trx_state_t.IB_TRX_COMMITTED_IN_MEMORY), PREPARED(
@@ -13,7 +13,7 @@ public enum State {
 
     private final int code;
 
-    private State(int code) {
+    private TransactionState(int code) {
         this.code = code;
     }
 
@@ -21,7 +21,7 @@ public enum State {
         return code;
     }
 
-    public static State fromCode(int code) {
-        return State.values()[code];
+    public static TransactionState fromCode(int code) {
+        return TransactionState.values()[code];
     }
 }

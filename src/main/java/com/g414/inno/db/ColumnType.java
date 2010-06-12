@@ -3,6 +3,7 @@ package com.g414.inno.db;
 import com.g414.inno.jna.impl.InnoDB;
 
 public enum ColumnType {
+    /* see InnoDB.ib_col_type_t */
     UNUSED(0), VARCHAR(InnoDB.ib_col_type_t.IB_VARCHAR), CHAR(
             InnoDB.ib_col_type_t.IB_CHAR), BINARY(
             InnoDB.ib_col_type_t.IB_BINARY), VARBINARY(
@@ -26,5 +27,32 @@ public enum ColumnType {
 
     public static ColumnType fromCode(int code) {
         return ColumnType.values()[code];
+    }
+
+    public boolean isByteArrayType() {
+        switch (this.code) {
+        case InnoDB.ib_col_type_t.IB_BINARY:
+        case InnoDB.ib_col_type_t.IB_VARBINARY:
+        case InnoDB.ib_col_type_t.IB_BLOB:
+            return true;
+        default:
+            return false;
+        }
+    }
+
+    public boolean isStringType() {
+        switch (this.code) {
+        case InnoDB.ib_col_type_t.IB_VARCHAR:
+        case InnoDB.ib_col_type_t.IB_CHAR:
+        case InnoDB.ib_col_type_t.IB_VARCHAR_ANYCHARSET:
+        case InnoDB.ib_col_type_t.IB_CHAR_ANYCHARSET:
+            return true;
+        default:
+            return false;
+        }
+    }
+
+    public boolean isIntegerType() {
+        return this.code == InnoDB.ib_col_type_t.IB_INT;
     }
 }

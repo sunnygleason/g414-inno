@@ -4,7 +4,6 @@ import java.nio.ByteBuffer;
 import java.nio.IntBuffer;
 import java.util.List;
 
-import com.g414.inno.db.impl.Util;
 import com.g414.inno.jna.impl.InnoDB;
 import com.sun.jna.Pointer;
 import com.sun.jna.ptr.PointerByReference;
@@ -12,26 +11,38 @@ import com.sun.jna.ptr.PointerByReference;
 public class Cursor {
     private final PointerByReference crsr;
     private final TableDef table;
+    private final IndexDef index;
 
     private volatile int err = InnoDB.db_err.DB_SUCCESS;
 
-    public Cursor(PointerByReference crsr, TableDef table) {
+    public Cursor(PointerByReference crsr, TableDef table, IndexDef index) {
         this.crsr = crsr;
         this.table = table;
+        this.index = index;
     }
 
     public PointerByReference getCrsr() {
         return crsr;
     }
 
-    public Tuple createReadTuple() {
+    public Tuple createClusteredIndexReadTuple() {
+        if (this.index != null) {
+            throw new IllegalArgumentException(
+                    "Secondary index cursor may not create cluster read tuples");
+        }
+
         return new Tuple(InnoDB.ib_clust_read_tuple_create(crsr.getValue()),
-                table);
+                table.getColDefs());
     }
 
-    public Tuple createSearchTuple(TupleBuilder tuple) {
+    public Tuple createClusteredIndexSearchTuple(TupleBuilder tuple) {
+        if (this.index != null) {
+            throw new IllegalArgumentException(
+                    "Secondary index cursor may not create cluster search tuples");
+        }
+
         Tuple searchTuple = new Tuple(InnoDB.ib_clust_search_tuple_create(crsr
-                .getValue()), table);
+                .getValue()), table.getColDefs());
 
         List<Object> values = tuple.getValues();
 
@@ -44,14 +55,52 @@ public class Cursor {
         return searchTuple;
     }
 
-    public SearchResultCode find(Tuple tupl, SearchMode searchMode,
-            boolean clusterAccess) {
+    public Tuple createSecondaryIndexReadTuple() {
+        if (this.index == null) {
+            throw new IllegalArgumentException(
+                    "Clustered index cursor may not create secondary index read tuples");
+        }
+
+        return new Tuple(InnoDB.ib_sec_read_tuple_create(crsr.getValue()),
+                index.getColumns());
+    }
+
+    public Tuple createSecondaryIndexSearchTuple(TupleBuilder tuple) {
+        if (this.index == null) {
+            throw new IllegalArgumentException(
+                    "Clustered index cursor may not create secondary index search tuples");
+        }
+
+        return new Tuple(InnoDB.ib_sec_search_tuple_create(crsr.getValue()),
+                index.getColumns());
+    }
+
+    public Cursor openIndex(String indexName) {
+        if (this.index != null) {
+            throw new IllegalArgumentException(
+                    "cannot open index from a secondary index cursor");
+        }
+
+        if (!this.table.getIndexDefs().containsKey(indexName)) {
+            throw new IllegalArgumentException("unknown index: " + indexName);
+        }
+
+        PointerByReference indexCrsr = new PointerByReference();
+
+        Util.assertSuccess(InnoDB.ib_cursor_open_index_using_name(crsr
+                .getValue(), indexName, indexCrsr));
+
+        return new Cursor(indexCrsr, table, table.getIndexDefs().get(indexName));
+    }
+
+    public void setClusterAccess() {
+        InnoDB.ib_cursor_set_cluster_access(crsr.getValue());
+    }
+
+    public SearchResultCode find(Tuple tupl, SearchMode searchMode) {
         IntBuffer result = ByteBuffer.allocateDirect(4).asIntBuffer();
         err = InnoDB.ib_cursor_moveto(crsr.getValue(), tupl.tupl, searchMode
                 .getCode(), result);
-        if (clusterAccess) {
-            InnoDB.ib_cursor_set_cluster_access(crsr.getValue());
-        }
 
         assertCursorState(err);
 
@@ -59,15 +108,20 @@ public class Cursor {
     }
 
     public void readRow(Tuple tupl) {
-        if (!this.hasNext()) {
+        if (!this.isPositioned()) {
             throw new IllegalStateException("no row at cursor!");
         }
+
         err = InnoDB.ib_cursor_read_row(crsr.getValue(), tupl.tupl);
         assertCursorState(err);
     }
 
+    public boolean hasNext() {
+        return (err == InnoDB.db_err.DB_SUCCESS);
+    }
+
     public boolean isPositioned() {
-        return InnoDB.ib_cursor_is_positioned(crsr.getValue()) == InnoDB.IB_TRUE;
+        return (InnoDB.ib_cursor_is_positioned(crsr.getValue()) == InnoDB.IB_TRUE);
     }
 
     public void deleteRow() {
@@ -85,10 +139,6 @@ public class Cursor {
         assertCursorState(err);
     }
 
-    public boolean hasNext() {
-        return err == InnoDB.db_err.DB_SUCCESS;
-    }
-
     public void prev() {
         err = InnoDB.ib_cursor_prev(crsr.getValue());
         assertCursorState(err);
@@ -99,55 +149,66 @@ public class Cursor {
         assertCursorState(err);
     }
 
-    public void lock(Lock mode) {
+    public void lock(LockMode mode) {
         Util.assertSuccess(InnoDB.ib_cursor_lock(crsr.getValue(), mode
                 .getCode()));
     }
 
-    public void insertRows(List<TupleBuilder> tuples) {
-        Pointer tupl = InnoDB.ib_clust_read_tuple_create(crsr.getValue());
-        Tuple tuple = new Tuple(tupl, table);
-
-        try {
-            for (TupleBuilder tupleValues : tuples) {
-                insertRow(tuple, tupleValues);
-            }
-        } finally {
-            tuple.delete();
-        }
-    }
-
-    public void insertRows(TupleBuilder... tuples) {
-        Pointer tupl = InnoDB.ib_clust_read_tuple_create(crsr.getValue());
-        Tuple tuple = new Tuple(tupl, table);
-
-        try {
-            for (TupleBuilder tupleValues : tuples) {
-                insertRow(tuple, tupleValues);
-            }
-        } finally {
-            tuple.delete();
-        }
+    public void setLockMode(LockMode mode) {
+        Util.assertSuccess(InnoDB.ib_cursor_set_lock_mode(crsr.getValue(), mode
+                .getCode()));
     }
 
     public void insertRow(Tuple tupl, TupleBuilder tuple) {
         List<Object> values = tuple.getValues();
-        TableDef def = tuple.getDef();
-        List<ColumnDef> colDefs = def.getColDefs();
+        List<ColumnDef> colDefs = tuple.getColumnDefs();
 
-        int len = colDefs.size();
-
-        for (int i = 0; i < len; i++) {
-            Object val = values.get(i);
-            ColumnDef colDef = colDefs.get(i);
-
-            setValue(tupl, colDef, i, val);
+        if (values.size() != tupl.columns.size()) {
+            throw new IllegalArgumentException("Must specify all column values");
         }
 
-        Util.assertSuccess(InnoDB.ib_cursor_insert_row(crsr.getValue(),
-                tupl.tupl));
+        try {
+            for (int i = 0; i < values.size(); i++) {
+                Object val = values.get(i);
+                ColumnDef def = colDefs.get(i);
 
-        tupl.clear();
+                setValue(tupl, def, i, val);
+            }
+
+            Util.assertSuccess(InnoDB.ib_cursor_insert_row(crsr.getValue(),
+                    tupl.tupl));
+        } finally {
+            tupl.clear();
+        }
+    }
+
+    public void updateRow(Tuple oldTuple, TupleBuilder tuple) {
+        List<Object> values = tuple.getValues();
+        List<ColumnDef> colDefs = tuple.getColumnDefs();
+
+        if (values.size() != oldTuple.columns.size()) {
+            throw new IllegalArgumentException("Must specify all column values");
+        }
+
+        Tuple newTuple = this.createClusteredIndexReadTuple();
+
+        try {
+            Util.assertSuccess(InnoDB.ib_tuple_copy(newTuple.tupl,
+                    oldTuple.tupl));
+
+            for (int i = 0; i < colDefs.size(); i++) {
+                Object val = values.get(i);
+                ColumnDef def = colDefs.get(i);
+
+                setValue(newTuple, def, i, val);
+            }
+
+            Util.assertSuccess(InnoDB.ib_cursor_update_row(crsr.getValue(),
+                    oldTuple.tupl, newTuple.tupl));
+        } finally {
+            oldTuple.clear();
+            newTuple.delete();
+        }
     }
 
     private static void setValue(Tuple tupl, ColumnDef colDef, int i, Object val) {

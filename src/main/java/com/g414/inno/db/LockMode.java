@@ -2,7 +2,8 @@ package com.g414.inno.db;
 
 import com.g414.inno.jna.impl.InnoDB;
 
-public enum Lock {
+public enum LockMode {
+    /* see InnoDB.ib_lck_mode_t */
     INTENTION_SHARED(InnoDB.ib_lck_mode_t.IB_LOCK_IS), INTENTION_EXCLUSIVE(
             InnoDB.ib_lck_mode_t.IB_LOCK_IX), LOCK_SHARED(
             InnoDB.ib_lck_mode_t.IB_LOCK_S), LOCK_EXCLUSIVE(
@@ -12,7 +13,7 @@ public enum Lock {
 
     private final int code;
 
-    private Lock(int code) {
+    private LockMode(int code) {
         this.code = code;
     }
 
@@ -20,7 +21,7 @@ public enum Lock {
         return code;
     }
 
-    public static Lock fromCode(int code) {
-        return Lock.values()[code];
+    public static LockMode fromCode(int code) {
+        return LockMode.values()[code];
     }
 }

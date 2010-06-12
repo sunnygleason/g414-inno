@@ -8,21 +8,17 @@ import java.nio.IntBuffer;
 import java.nio.LongBuffer;
 import java.nio.ShortBuffer;
 
-import com.g414.inno.db.impl.Util;
 import com.g414.inno.jna.impl.InnoDB;
 import com.sun.jna.Memory;
 import com.sun.jna.Native;
 import com.sun.jna.Pointer;
 
 public class TupleStorage {
-    public static Number loadInteger(Tuple tupl, int i, ColumnDef def) {
-        int length = def.getLength();
-        boolean signed = !def.getAttrs().contains(ColumnAttribute.UNSIGNED);
-
+    public static Number loadInteger(Tuple tupl, int i, int length,
+            boolean signed) {
         ByteBuffer buf = ByteBuffer.allocateDirect(length);
 
-        InnoDB.ib_col_meta_t meta = new InnoDB.ib_col_meta_t();
-        if (InnoDB.ib_col_get_meta(tupl.tupl, i, meta) == InnoDB.IB_SQL_NULL) {
+        if (InnoDB.ib_col_get_len(tupl.tupl, i) == InnoDB.IB_SQL_NULL) {
             return null;
         }
 
@@ -102,7 +98,8 @@ public class TupleStorage {
     public static void storeString(Tuple tupl, int i, String stringVal) {
         try {
             byte[] stringBytes = stringVal.getBytes("UTF-8");
-            Pointer stringPointer = TupleStorage.getDirectMemoryString(stringBytes);
+            Pointer stringPointer = TupleStorage
+                    .getDirectMemoryString(stringBytes);
             Util.assertSuccess(InnoDB.ib_col_set_value(tupl.tupl, i,
                     stringPointer, stringBytes.length + 1));
         } catch (UnsupportedEncodingException e) {

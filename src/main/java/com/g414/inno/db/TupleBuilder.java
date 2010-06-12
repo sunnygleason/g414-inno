@@ -3,21 +3,63 @@ package com.g414.inno.db;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicInteger;
+import java.util.Map;
 
 public class TupleBuilder {
-    private final TableDef def;
+    private final List<ColumnDef> columnDefs;
     private final List<Object> values;
-    private final AtomicInteger size = new AtomicInteger(0);
+    private final boolean validate;
+    private int size = 0;
 
-    public TupleBuilder(TableDef def) {
-        this.def = def;
-        this.values = new ArrayList<Object>(def.getColumnDefs().size());
+    public TupleBuilder(TableDef table) {
+        this(table, true);
+    }
+
+    public TupleBuilder(TableDef table, boolean validate) {
+        this.columnDefs = table.getColDefs();
+        this.values = new ArrayList<Object>(columnDefs.size());
+        this.validate = validate;
+    }
+
+    public static TupleBuilder fromValueMap(TableDef table,
+            Map<String, Object> valueMap) {
+        return fromValueMap(table, valueMap, true);
+    }
+
+    public static TupleBuilder fromValueMap(TableDef table,
+            Map<String, Object> valueMap, boolean validate) {
+        TupleBuilder builder = new TupleBuilder(table, validate);
+
+        for (ColumnDef def : builder.columnDefs) {
+            builder.addValues(valueMap.get(def.getName()));
+        }
+
+        return builder;
     }
 
     public TupleBuilder addValue(Object value) {
+        if (size >= columnDefs.size()) {
+            throw new IllegalStateException("tuple already full!");
+        }
+
+        if (validate) {
+            ColumnDef def = columnDefs.get(size);
+            if (!Validation.isValid(def, value)) {
+                throw new InnoException("Invalid object for column=" + size
+                        + ", type=" + def.getType() + ", value=" + value);
+            }
+        }
+
         values.add(value);
-        size.getAndIncrement();
+        size += 1;
+
+        return this;
+    }
+
+    public TupleBuilder addValues(Object... valuez) {
+        for (Object value : valuez) {
+            this.addValue(value);
+        }
 
         return this;
     }
@@ -27,10 +69,10 @@ public class TupleBuilder {
     }
 
     public int getSize() {
-        return size.get();
+        return size;
     }
 
-    public TableDef getDef() {
-        return def;
+    public List<ColumnDef> getColumnDefs() {
+        return columnDefs;
     }
 }
