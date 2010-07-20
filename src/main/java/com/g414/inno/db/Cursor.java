@@ -71,8 +71,18 @@ public class Cursor {
                     "Clustered index cursor may not create secondary index search tuples");
         }
 
-        return new Tuple(InnoDB.ib_sec_search_tuple_create(crsr.getValue()),
-                index.getColumns());
+        Tuple searchTuple = new Tuple(InnoDB.ib_sec_search_tuple_create(crsr
+                .getValue()), index.getColumns());
+
+        List<Object> values = tuple.getValues();
+
+        for (int i = 0; i < tuple.getSize(); i++) {
+            Object value = values.get(i);
+            ColumnDef colDef = index.getColumns().get(i);
+            setValue(searchTuple, colDef, i, value);
+        }
+
+        return searchTuple;
     }
 
     public Cursor openIndex(String indexName) {

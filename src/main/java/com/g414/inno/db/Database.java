@@ -118,8 +118,6 @@ public class Database {
 
         Util.assertSuccess(InnoDB.ib_cfg_set("write_io_threads", c
                 .getWriteIOThreads()));
-        
-
 
         // Util.assertSuccess(InnoDB.ib_cfg_set("log_buffer_size", c
         // .getLogBufferSize()));
@@ -242,10 +240,11 @@ public class Database {
 
     public boolean tableExists(TableDef tableDef) {
         boolean found = false;
-        Transaction check = null;
+        Transaction txn = null;
+        Cursor check = null;
         try {
-            check = this.beginTransaction(TransactionLevel.REPEATABLE_READ);
-            check.openTable(tableDef);
+            txn = this.beginTransaction(TransactionLevel.REPEATABLE_READ);
+            check = txn.openTable(tableDef);
 
             found = true;
         } catch (InnoException expected) {
@@ -254,7 +253,11 @@ public class Database {
             }
         } finally {
             if (check != null) {
-                check.commit();
+                check.close();
+            }
+
+            if (txn != null) {
+                txn.commit();
             }
         }
         return found;
