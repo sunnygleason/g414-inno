@@ -2,33 +2,35 @@ package com.g414.inno.db;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 public class TupleBuilder {
-    private final List<ColumnDef> columnDefs;
-    private final List<Object> values;
-    private final boolean validate;
-    private int size = 0;
-
-    public TupleBuilder(TableDef table) {
-        this(table, true);
+    public enum Options {
+        COERCE, VALIDATE;
     }
 
-    public TupleBuilder(TableDef table, boolean validate) {
+    private final List<ColumnDef> columnDefs;
+    private final List<Object> values;
+    private final Set<Options> options;
+    private int size = 0;
+
+    public TupleBuilder(TableDef table, Options... values) {
         this.columnDefs = table.getColDefs();
         this.values = new ArrayList<Object>(columnDefs.size());
-        this.validate = validate;
+        this.options = getImmutableSetOf(values);
     }
 
     public static TupleBuilder fromValueMap(TableDef table,
             Map<String, Object> valueMap) {
-        return fromValueMap(table, valueMap, true);
+        return fromValueMap(table, valueMap, Options.VALIDATE);
     }
 
     public static TupleBuilder fromValueMap(TableDef table,
-            Map<String, Object> valueMap, boolean validate) {
-        TupleBuilder builder = new TupleBuilder(table, validate);
+            Map<String, Object> valueMap, Options... values) {
+        TupleBuilder builder = new TupleBuilder(table, values);
 
         for (ColumnDef def : builder.columnDefs) {
             builder.addValues(valueMap.get(def.getName()));
@@ -42,8 +44,14 @@ public class TupleBuilder {
             throw new IllegalStateException("tuple already full!");
         }
 
-        if (validate) {
-            ColumnDef def = columnDefs.get(size);
+        ColumnDef def = columnDefs.get(size);
+
+        if (options.contains(Options.COERCE) && value != null
+                && value instanceof String) {
+            value = TupleStorage.coerceType((String) value, def.getType());
+        }
+
+        if (options.contains(Options.VALIDATE)) {
             if (!Validation.isValid(def, value)) {
                 throw new InnoException("Invalid object for column=" + size
                         + ", type=" + def.getType() + ", value=" + value);
@@ -74,5 +82,15 @@ public class TupleBuilder {
 
     public List<ColumnDef> getColumnDefs() {
         return columnDefs;
+    }
+
+    private static Set<Options> getImmutableSetOf(Options... values) {
+        EnumSet<Options> newOptions = EnumSet.noneOf(Options.class);
+
+        for (Options opt : values) {
+            newOptions.add(opt);
+        }
+
+        return Collections.unmodifiableSet(newOptions);
     }
 }

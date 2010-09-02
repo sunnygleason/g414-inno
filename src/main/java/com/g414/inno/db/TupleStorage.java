@@ -1,6 +1,7 @@
 package com.g414.inno.db;
 
 import java.io.UnsupportedEncodingException;
+import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
@@ -14,6 +15,41 @@ import com.sun.jna.Native;
 import com.sun.jna.Pointer;
 
 public class TupleStorage {
+    public static Object coerceType(String value, ColumnType type) {
+        if (value == null) {
+            throw new IllegalArgumentException("Value must not be null");
+        }
+
+        Object toReturn = null;
+        switch (type) {
+        case BLOB:
+        case BINARY:
+        case VARBINARY:
+            toReturn = value.getBytes();
+            break;
+        case CHAR:
+        case CHAR_ANYCHARSET:
+        case VARCHAR:
+        case VARCHAR_ANYCHARSET:
+            toReturn = value;
+            break;
+        case INT:
+            toReturn = new BigInteger(value);
+            break;
+        case DECIMAL:
+            toReturn = value;
+            break;
+        case FLOAT:
+        case DOUBLE:
+            toReturn = new BigDecimal(value);
+            break;
+        default:
+            throw new IllegalArgumentException("Unsupported Type: " + type);
+        }
+
+        return toReturn;
+    }
+
     public static Number loadInteger(Tuple tupl, int i, int length,
             boolean signed) {
         ByteBuffer buf = ByteBuffer.allocateDirect(length);

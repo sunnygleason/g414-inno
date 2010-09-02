@@ -14,6 +14,12 @@ public class TableBuilder {
     private volatile AtomicInteger index = new AtomicInteger();
 
     public TableBuilder(String name) {
+        String[] nameParts = name.split("/");
+        if (nameParts.length != 2) {
+            throw new IllegalArgumentException(
+                    "Malformed table name - must include database name followed by slash");
+        }
+
         this.name = name;
         this.columns = new LinkedHashMap<String, ColumnDef>();
         this.indexes = new LinkedHashMap<String, List<IndexPart>>();
@@ -99,7 +105,7 @@ public class TableBuilder {
             }
         }
 
-        throw new IllegalArgumentException("no primary index found!");
+        return null;
     }
 
     private static class IndexPart {
