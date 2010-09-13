@@ -38,7 +38,6 @@ public class DatabaseTemplate {
                 txn.commit();
             }
         }
-
     }
 
     public Map<String, Object> load(Transaction txn, TableDef def,
@@ -90,7 +89,8 @@ public class DatabaseTemplate {
         }
     }
 
-    public void insert(Transaction txn, TableDef def, Map<String, Object> data) {
+    public boolean insert(Transaction txn, TableDef def,
+            Map<String, Object> data) {
         Cursor c = null;
         Tuple toInsert = null;
         try {
@@ -100,8 +100,8 @@ public class DatabaseTemplate {
 
             toInsert = c.createClusteredIndexReadTuple();
             TupleBuilder tpl = createTupleBuilder(def, data);
-            c.insertRow(toInsert, tpl);
-            toInsert.clear();
+
+            return c.insertRow(toInsert, tpl);
         } finally {
             if (toInsert != null) {
                 toInsert.delete();
@@ -144,9 +144,7 @@ public class DatabaseTemplate {
 
             TupleBuilder val = createTupleBuilder(def, data);
 
-            c.updateRow(toUpdate, val);
-            toUpdate.clear();
-            return true;
+            return c.updateRow(toUpdate, val);
         } finally {
             if (toUpdate != null) {
                 toUpdate.delete();
@@ -190,14 +188,13 @@ public class DatabaseTemplate {
 
                 if (matchesPrimaryKey(primary, data, found)) {
                     c.updateRow(toUpdate, val);
-                    toUpdate.clear();
+
                     return true;
                 }
             }
 
             toInsert = c.createClusteredIndexReadTuple();
             c.insertRow(toInsert, val);
-            toInsert.clear();
 
             return false;
         } finally {
@@ -244,6 +241,7 @@ public class DatabaseTemplate {
                 if (matchesPrimaryKey(primary, data, found)) {
                     c.deleteRow();
                     toDelete.clear();
+
                     return true;
                 }
             }

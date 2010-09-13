@@ -169,7 +169,7 @@ public class Cursor {
                 .getCode()));
     }
 
-    public void insertRow(Tuple tupl, TupleBuilder tuple) {
+    public boolean insertRow(Tuple tupl, TupleBuilder tuple) {
         List<Object> values = tuple.getValues();
         List<ColumnDef> colDefs = tuple.getColumnDefs();
 
@@ -185,14 +185,14 @@ public class Cursor {
                 setValue(tupl, def, i, val);
             }
 
-            Util.assertSuccess(InnoDB.ib_cursor_insert_row(crsr.getValue(),
-                    tupl.tupl));
+            return Util.wasInsertSuccess(InnoDB.ib_cursor_insert_row(crsr
+                    .getValue(), tupl.tupl));
         } finally {
             tupl.clear();
         }
     }
 
-    public void updateRow(Tuple oldTuple, TupleBuilder tuple) {
+    public boolean updateRow(Tuple oldTuple, TupleBuilder tuple) {
         List<Object> values = tuple.getValues();
         List<ColumnDef> colDefs = tuple.getColumnDefs();
 
@@ -213,8 +213,8 @@ public class Cursor {
                 setValue(newTuple, def, i, val);
             }
 
-            Util.assertSuccess(InnoDB.ib_cursor_update_row(crsr.getValue(),
-                    oldTuple.tupl, newTuple.tupl));
+            return Util.wasUpdateSuccess(InnoDB.ib_cursor_update_row(crsr
+                    .getValue(), oldTuple.tupl, newTuple.tupl));
         } finally {
             oldTuple.clear();
             newTuple.delete();

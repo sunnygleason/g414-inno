@@ -16,4 +16,30 @@ public class Util {
                     + InnoDB.ib_strerror(code).getString(0));
         }
     }
+
+    public static boolean wasInsertSuccess(int code) {
+        switch (code) {
+        case InnoDB.db_err.DB_SUCCESS:
+            return true;
+        case InnoDB.db_err.DB_DUPLICATE_KEY:
+            return false;
+        default:
+            throw new InnoException("INNODB Error " + code + " : "
+                    + InnoDB.ib_strerror(code).getString(0));
+        }
+    }
+
+    public static boolean wasUpdateSuccess(int code) {
+        switch (code) {
+        case InnoDB.db_err.DB_SUCCESS:
+            return true;
+        case InnoDB.db_err.DB_NO_REFERENCED_ROW:
+        case InnoDB.db_err.DB_RECORD_NOT_FOUND:
+        case InnoDB.db_err.DB_DUPLICATE_KEY:
+            return false;
+        default:
+            throw new InnoException("INNODB Error " + code + " : "
+                    + InnoDB.ib_strerror(code).getString(0));
+        }
+    }
 }
