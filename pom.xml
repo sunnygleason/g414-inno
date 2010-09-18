@@ -26,7 +26,7 @@
       <scope>test</scope>
     </dependency>
     <dependency>
-      <groupId>com.sun.faban</groupId>
+      <groupId>com.g414.xfaban</groupId>
       <artifactId>xfaban</artifactId>
       <version>1.0.0</version>
       <scope>test</scope>
