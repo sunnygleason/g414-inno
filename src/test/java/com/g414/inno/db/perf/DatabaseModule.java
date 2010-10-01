@@ -23,13 +23,6 @@ public class DatabaseModule extends AbstractModule {
         final Database database = new Database();
         database.createDatabase("inno");
 
-        Runtime.getRuntime().addShutdownHook(new Thread(new Runnable() {
-            @Override
-            public void run() {
-                database.shutdown(false);
-            }
-        }));
-
         bind(Database.class).toInstance(database);
         bind(DatabaseTemplate.class).toInstance(new DatabaseTemplate(database));
 
