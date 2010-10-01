@@ -39,6 +39,7 @@
       <plugin>
         <artifactId>maven-surefire-plugin</artifactId>
         <configuration>
+          <forkMode>always</forkMode>
           <excludedGroups>slow</excludedGroups>
         </configuration>
       </plugin>
