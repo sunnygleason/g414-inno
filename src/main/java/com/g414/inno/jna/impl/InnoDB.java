@@ -17,7 +17,7 @@ import com.sun.jna.Structure;
 import com.sun.jna.ptr.PointerByReference;
 
 public class InnoDB implements Library {
-    public static final String JNA_LIBRARY_NAME = "innodb";
+    public static final String JNA_LIBRARY_NAME = System.getProperty("inno.db.library.name", "innodb");
     public static final NativeLibrary JNA_NATIVE_LIB = NativeLibrary
             .getInstance(InnoDB.JNA_LIBRARY_NAME);
     static {
