@@ -29,15 +29,17 @@ public class InsertionDriver extends PerfDriverBase {
 
         DriverContext.getContext().recordTime();
 
-        template.inTransaction(TransactionLevel.REPEATABLE_READ,
-                new TransactionCallback<Boolean>() {
-                    @Override
-                    public Boolean inTransaction(Transaction txn) {
-                        return template.insert(txn, tableDef, nextEntity);
-                    }
-                });
-
-        DriverContext.getContext().recordTime();
+        try {
+            template.inTransaction(TransactionLevel.REPEATABLE_READ,
+                    new TransactionCallback<Boolean>() {
+                        @Override
+                        public Boolean inTransaction(Transaction txn) {
+                            return template.insert(txn, tableDef, nextEntity);
+                        }
+                    });
+        } finally {
+            DriverContext.getContext().recordTime();
+        }
     }
 
     public static class GuiceModule extends PerfModuleBase {
