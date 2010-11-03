@@ -48,8 +48,6 @@ public class DatabaseTemplate {
         Tuple toReturn = null;
         try {
             c = txn.openTable(def);
-            c.setLockMode(LockMode.INTENTION_EXCLUSIVE);
-            c.lock(LockMode.LOCK_EXCLUSIVE);
 
             TupleBuilder tpl = createTupleBuilder(def, primary.getColumns(),
                     data);
@@ -95,8 +93,6 @@ public class DatabaseTemplate {
         Tuple toInsert = null;
         try {
             c = txn.openTable(def);
-            c.setLockMode(LockMode.INTENTION_EXCLUSIVE);
-            c.lock(LockMode.LOCK_EXCLUSIVE);
 
             toInsert = c.createClusteredIndexReadTuple();
             TupleBuilder tpl = createTupleBuilder(def, data);
@@ -121,8 +117,6 @@ public class DatabaseTemplate {
         Tuple toUpdate = null;
         try {
             c = txn.openTable(def);
-            c.setLockMode(LockMode.INTENTION_EXCLUSIVE);
-            c.lock(LockMode.LOCK_EXCLUSIVE);
 
             TupleBuilder tpl = createTupleBuilder(def, primary.getColumns(),
                     data);
@@ -170,8 +164,6 @@ public class DatabaseTemplate {
 
         try {
             c = txn.openTable(def);
-            c.setLockMode(LockMode.INTENTION_EXCLUSIVE);
-            c.lock(LockMode.LOCK_EXCLUSIVE);
 
             TupleBuilder val = createTupleBuilder(def, data);
             TupleBuilder tpl = createTupleBuilder(def, primary.getColumns(),
@@ -224,8 +216,6 @@ public class DatabaseTemplate {
         Tuple toDelete = null;
         try {
             c = txn.openTable(def);
-            c.setLockMode(LockMode.INTENTION_EXCLUSIVE);
-            c.lock(LockMode.LOCK_EXCLUSIVE);
 
             TupleBuilder tpl = createTupleBuilder(def, primary.getColumns(),
                     data);
