@@ -108,6 +108,15 @@ public class Cursor {
     }
 
     public SearchResultCode find(Tuple tupl, SearchMode searchMode) {
+        return find(tupl, searchMode, MatchMode.CLOSEST);
+    }
+
+    public SearchResultCode find(Tuple tupl, SearchMode searchMode,
+            MatchMode matchMode) {
+        int matchCode = matchMode != null ? matchMode.getCode()
+                : MatchMode.EXACT.getCode();
+        InnoDB.ib_cursor_set_match_mode(crsr.getValue(), matchCode);
+
         IntBuffer result = ByteBuffer.allocateDirect(4).asIntBuffer();
         err = InnoDB.ib_cursor_moveto(crsr.getValue(), tupl.tupl, searchMode
                 .getCode(), result);
